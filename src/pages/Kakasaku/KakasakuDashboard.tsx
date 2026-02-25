@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import {
   Heart, Wallet, LogOut, CheckCircle2, 
   History, ArrowRight, AlertCircle, CreditCard, 
   User, Sparkles, ReceiptText, Clock, XCircle, 
-  HeartHandshake, ImageIcon, ChevronLeft, ChevronRight
+  HeartHandshake, ImageIcon, ChevronLeft, ChevronRight,
+  MessageCircle, Users 
 } from "lucide-react";
 
 export default function KakasakuDashboard() {
@@ -25,88 +26,93 @@ export default function KakasakuDashboard() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Ref untuk Slider Program Donasi
   const sliderRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/login");
-        return;
-      }
+  const fetchData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
 
-      // 1. Ambil Profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      setProfile(profileData);
+    // 1. Ambil Profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    setProfile(profileData);
 
-      // 2. Ambil Langganan Kakak Saku Aktif
-      const { data: subData } = await supabase
-        .from('kakasaku_subscriptions')
-        .select('*, kakasaku_packages(*)')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle(); 
+    // 2. Ambil Langganan Kakak Saku Aktif
+    const { data: subData } = await supabase
+      .from('kakasaku_subscriptions')
+      .select('*, kakasaku_packages(*)')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle(); 
+    
+    if (subData) setSubscription(subData);
+
+    // 3. Ambil Semua Riwayat Pembayaran (Update Realtime)
+    const { data: paymentsData } = await supabase
+      .from('kakasaku_payments')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (paymentsData) {
+      setRecentPayments(paymentsData.slice(0, 4));
+      setTotalTransactions(paymentsData.length);
+
+      const total = paymentsData
+        .filter(p => ['settled', 'success', 'paid'].includes(p.status?.toLowerCase()))
+        .reduce((sum, current) => sum + (Number(current.amount) || Number(current.bill_total) || 0), 0);
       
-      if (subData) setSubscription(subData);
+      setTotalDonasi(total);
+    }
 
-      // 3. Ambil Semua Riwayat Pembayaran
-      const { data: paymentsData } = await supabase
-        .from('kakasaku_payments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (paymentsData) {
-        setRecentPayments(paymentsData.slice(0, 4));
-        setTotalTransactions(paymentsData.length);
-
-        const total = paymentsData
-          .filter(p => ['settled', 'success', 'paid'].includes(p.status?.toLowerCase()))
-          .reduce((sum, current) => sum + (current.amount || current.bill_total || 0), 0);
-        
-        setTotalDonasi(total);
-      }
-
-      // 4. Ambil Data Program Donasi (Ambil 5 terbaru untuk slider)
-      const { data: programsData } = await supabase
-        .from('donation_programs')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      if (programsData) {
-        setPrograms(programsData);
-      }
-      
-      setLoading(false);
-    };
-
-    fetchData();
+    // 4. Ambil Data Program Donasi
+    const { data: programsData } = await supabase
+      .from('donation_programs')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    
+    if (programsData) {
+      setPrograms(programsData);
+    }
+    
+    setLoading(false);
   }, [navigate]);
+
+  useEffect(() => {
+    fetchData();
+
+    // SETUP REAL-TIME
+    const channel = supabase
+      .channel("kakasaku-dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "kakasaku_payments" }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
 
   const handleExitToHome = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
 
-  // Fungsi untuk menggeser slider ke Kiri
   const slideLeft = () => {
-    if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: -320, behavior: 'smooth' });
-    }
+    if (sliderRef.current) sliderRef.current.scrollBy({ left: -320, behavior: 'smooth' });
   };
 
-  // Fungsi untuk menggeser slider ke Kanan
   const slideRight = () => {
-    if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: 320, behavior: 'smooth' });
-    }
+    if (sliderRef.current) sliderRef.current.scrollBy({ left: 320, behavior: 'smooth' });
   };
 
   const formatRupiah = (angka: number) => {
@@ -125,6 +131,21 @@ export default function KakasakuDashboard() {
     const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
     return `${months[d.getMonth()]} ${d.getFullYear()}`;
   };
+
+  const getPackageInfo = () => {
+    if (!subscription) return { name: 'Paket Kakak Saku', price: 0 };
+    
+    const pkg = Array.isArray(subscription.kakasaku_packages) 
+      ? subscription.kakasaku_packages[0] 
+      : subscription.kakasaku_packages;
+      
+    return {
+      name: pkg?.name || subscription.package_name || 'Paket Kakak Saku',
+      price: Number(subscription.amount) || Number(pkg?.price) || Number(pkg?.amount) || 0
+    };
+  };
+
+  const packageInfo = getPackageInfo();
 
   const StatusBadge = ({ status }: { status: string }) => {
     const s = status?.toLowerCase();
@@ -205,10 +226,10 @@ export default function KakasakuDashboard() {
                     <span className="font-bold text-sm">Paket Rutin Anda</span>
                   </div>
                   <h2 className="text-2xl md:text-3xl font-black mb-1 text-white">
-                    {subscription.kakasaku_packages?.name || 'Paket Kakak Saku'}
+                    {packageInfo.name}
                   </h2>
                   <p className="text-gray-400 text-sm md:text-base">
-                    Komitmen bulanan: <span className="text-white font-bold">{formatRupiah(subscription.kakasaku_packages?.price || 0)}</span>
+                    Komitmen bulanan: <span className="text-white font-bold">{formatRupiah(packageInfo.price)}</span>
                   </p>
                 </div>
                 
@@ -227,24 +248,48 @@ export default function KakasakuDashboard() {
         </div>
 
         {/* 3. STATISTIK CEPAT */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <Card className="rounded-3xl border border-gray-100 shadow-sm bg-white">
-            <CardContent className="p-5 flex flex-col items-center text-center">
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <Card className="rounded-3xl border border-gray-100 shadow-sm bg-white overflow-hidden relative">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-[shimmer_2s_infinite]"></div>
+            <CardContent className="p-5 flex flex-col items-center text-center pt-6">
               <div className="bg-green-50 p-3 rounded-full text-green-600 mb-3"><Wallet className="w-6 h-6" /></div>
               <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Donasi</p>
-              <h3 className="text-lg md:text-xl font-black text-[#1A1A1A]">
+              <h3 className="text-lg md:text-xl font-black text-[#1A1A1A] transition-all duration-500">
                 {formatRupiah(totalDonasi)}
               </h3>
             </CardContent>
           </Card>
           <Card className="rounded-3xl border border-gray-100 shadow-sm bg-white">
-            <CardContent className="p-5 flex flex-col items-center text-center">
+            <CardContent className="p-5 flex flex-col items-center text-center pt-6">
               <div className="bg-blue-50 p-3 rounded-full text-blue-600 mb-3"><History className="w-6 h-6" /></div>
               <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Bulan Bergabung</p>
               <h3 className="text-lg md:text-xl font-black text-[#1A1A1A]">{getJoinDate()}</h3>
             </CardContent>
           </Card>
         </div>
+
+        {/* 3.5 BANNER KOMUNITAS WHATSAPP */}
+        {subscription && (
+          <div className="bg-green-50 border border-green-200 rounded-3xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4 text-left w-full sm:w-auto">
+              <div className="bg-green-500 p-3 rounded-2xl text-white shrink-0 shadow-md shadow-green-500/20">
+                <MessageCircle className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="font-bold text-green-900 text-lg md:text-xl mb-0.5">Komunitas Kakak Saku</h3>
+                <p className="text-xs md:text-sm text-green-700 leading-snug">
+                  Gabung grup untuk melihat update & ngobrol bareng donatur lainnya!
+                </p>
+              </div>
+            </div>
+            <Button 
+              className="w-full sm:w-auto shrink-0 bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold rounded-xl shadow-lg shadow-green-600/20 py-6 px-6"
+              onClick={() => window.open("https://chat.whatsapp.com/JES7FR5I9wi7mCzikWh2KV?mode=gi_t", "_blank")}
+            >
+              <Users className="w-5 h-5 mr-2" /> Gabung Grup WA
+            </Button>
+          </div>
+        )}
 
         {/* 4. PROGRAM DONASI (SLIDER) */}
         <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-orange-100 relative">
@@ -267,20 +312,15 @@ export default function KakasakuDashboard() {
             </div>
           ) : (
             <div className="relative group">
-              
-              {/* Tombol Panah Kiri (Muncul melayang di kiri) */}
               {programs.length > 1 && (
                 <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={slideLeft} 
+                  variant="outline" size="icon" onClick={slideLeft} 
                   className="absolute left-[-16px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-xl border-gray-200 text-gray-500 hover:text-orange-500 hover:border-orange-500 hidden sm:flex items-center justify-center transition-all"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </Button>
               )}
 
-              {/* Container Slider Utama */}
               <div 
                 ref={sliderRef}
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
@@ -294,7 +334,6 @@ export default function KakasakuDashboard() {
                       key={prog.id} 
                       className="w-[85%] sm:w-[48%] shrink-0 snap-start border border-gray-100 rounded-2xl overflow-hidden hover:border-orange-200 hover:shadow-md transition-all bg-white flex flex-col"
                     >
-                      {/* Gambar Thumbnail */}
                       <div className="w-full h-36 bg-gray-100 relative overflow-hidden shrink-0">
                         {prog.image_url ? (
                           <img src={prog.image_url} alt={prog.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
@@ -308,12 +347,10 @@ export default function KakasakuDashboard() {
                         </div>
                       </div>
                       
-                      {/* Detail Konten */}
                       <div className="p-4 flex flex-col flex-grow">
                         <h4 className="font-bold text-[#1A1A1A] mb-1 line-clamp-1" title={prog.title}>{prog.title}</h4>
                         <p className="text-xs text-gray-500 line-clamp-2 mb-4 flex-grow min-h-[2rem]">{prog.description}</p>
                         
-                        {/* Progress Bar */}
                         <div className="mb-4">
                           <div className="flex justify-between text-[10px] font-bold mb-1.5">
                             <span className="text-orange-500">Terkumpul {formatRupiah(prog.collected_amount)}</span>
@@ -327,10 +364,10 @@ export default function KakasakuDashboard() {
                           </div>
                         </div>
 
-                        {/* Tombol Donasi */}
+                        {/* PERBAIKAN: Mengubah navigasi URL dari /donasi/ID menjadi /donate?program=ID */}
                         <Button 
                           className="w-full rounded-xl bg-orange-50 hover:bg-orange-500 hover:text-white text-orange-600 font-bold transition-colors mt-auto"
-                          onClick={() => navigate(`/donasi/${prog.id}`)}
+                          onClick={() => navigate(`/donate?program=${prog.id}`)}
                         >
                           <Heart className="w-4 h-4 mr-2" /> Donasi Sekarang
                         </Button>
@@ -340,12 +377,9 @@ export default function KakasakuDashboard() {
                 })}
               </div>
 
-              {/* Tombol Panah Kanan (Muncul melayang di kanan) */}
               {programs.length > 1 && (
                 <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={slideRight} 
+                  variant="outline" size="icon" onClick={slideRight} 
                   className="absolute right-[-16px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-xl border-gray-200 text-gray-500 hover:text-orange-500 hover:border-orange-500 hidden sm:flex items-center justify-center transition-all"
                 >
                   <ChevronRight className="w-5 h-5" />

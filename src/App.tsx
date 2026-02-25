@@ -50,7 +50,7 @@ const App = () => (
               <Route path="/donasi" element={<Donasi />} />
               <Route path="/donate" element={<Donate />} />
               <Route path="/tentang" element={<Tentang />} />
-              <Route path="/donasi/status" element={<Status />} />
+              <Route path="/status" element={<Status />} />
 
               {/* Kakasaku Routes */}
               <Route path="/kakasaku" element={<KakasakuLanding />} />
