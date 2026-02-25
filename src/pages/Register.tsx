@@ -36,18 +36,16 @@ export default function Register() {
     }
 
     if (data.user) {
-      // 2. Simpan ke tabel profiles yang sudah dirombak
+      // 2. PERBAIKAN: Gunakan UPSERT agar tidak bentrok dengan Trigger Database
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert([
-          { 
-            id: data.user.id, 
-            nama_lengkap: name, 
-            no_wa: phone, 
-            email: email,
-            role: 'donatur' 
-          }
-        ]);
+        .upsert({ 
+          id: data.user.id, 
+          nama_lengkap: name, 
+          no_wa: phone, 
+          email: email,
+          role: 'donatur' 
+        });
 
       if (profileError) {
         toast({ title: "Error Profil", description: profileError.message, variant: "destructive" });
