@@ -33,12 +33,7 @@ export default function Tentang() {
                 <h2 className="text-2xl font-bold text-foreground">Siapa Kami</h2>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Jakarta Mengabdi adalah platform sosial dan kemanusiaan yang lahir dari semangat warga Jakarta untuk saling membantu.
-                Kami menghubungkan para donatur dengan program-program sosial yang berdampak langsung bagi masyarakat yang membutuhkan di seluruh wilayah Jakarta.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                Melalui teknologi dan transparansi, kami memastikan setiap rupiah yang Anda donasikan tersalurkan dengan tepat sasaran
-                dan dapat dipertanggungjawabkan. Kami percaya bahwa perubahan besar dimulai dari aksi kecil yang dilakukan bersama-sama.
+                Jakarta Mengabdi merupakan sebuah komunitas yang berbadan hukum perkumpulan dan wadah gerakan pengabdian masyarakat bagi para pemuda pemudi Jakarta. Berfokus terhadap 2 (dua) bidang pengabdian yang terdiri dari Pemberdayaan Masyarakat (fokus pada pengembangan kemandirian dan kesejahteraan masyarakat) serta Edukasi Anak & Remaja (fokus pada peningkatan pengetahuan, wawasan, dan minat belajar pada usia anak & remaja).
               </p>
             </motion.div>
           </div>
@@ -56,8 +51,7 @@ export default function Tentang() {
                   <h2 className="text-2xl font-bold text-foreground">Visi</h2>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  Menjadi platform terdepan dalam menghubungkan kebaikan warga Jakarta, menciptakan ekosistem kepedulian sosial
-                  yang berkelanjutan dan berdampak nyata bagi kehidupan masyarakat.
+                  Membangun wadah komunitas yang berdedikasi sosial bagi anak muda DKI Jakarta secara sinergis, adaptif, dan berkelanjutan, demi mewujudkan masyarakat Jakarta yang lebih baik.
                 </p>
               </motion.div>
 
@@ -68,11 +62,28 @@ export default function Tentang() {
                   </div>
                   <h2 className="text-2xl font-bold text-foreground">Misi</h2>
                 </div>
-                <ul className="text-muted-foreground leading-relaxed space-y-2">
-                  <li className="flex gap-2"><Heart className="w-4 h-4 text-primary mt-1 shrink-0" /> Menyalurkan donasi secara transparan dan akuntabel</li>
-                  <li className="flex gap-2"><Heart className="w-4 h-4 text-primary mt-1 shrink-0" /> Mengembangkan program sosial yang berdampak langsung</li>
-                  <li className="flex gap-2"><Heart className="w-4 h-4 text-primary mt-1 shrink-0" /> Memberdayakan komunitas lokal di seluruh Jakarta</li>
-                  <li className="flex gap-2"><Heart className="w-4 h-4 text-primary mt-1 shrink-0" /> Mendorong budaya saling berbagi dan peduli sesama</li>
+                <ul className="text-muted-foreground leading-relaxed space-y-4">
+                  <li className="flex gap-2">
+                    <Heart className="w-4 h-4 text-primary mt-1 shrink-0" />
+                    <div>
+                      <div className="font-bold text-foreground">Jakarta Berdaya</div>
+                      <p className="text-sm">Membantu kemajuan masyarakat DKI Jakarta melalui inisiasi gerakan pengabdian dengan anak muda sebagai motor penggeraknya</p>
+                    </div>
+                  </li>
+                  <li className="flex gap-2">
+                    <Heart className="w-4 h-4 text-primary mt-1 shrink-0" />
+                    <div>
+                      <div className="font-bold text-foreground">Jakarta Selaras</div>
+                      <p className="text-sm">Membangun hubungan kerjasama yang produktif dan berkelanjutan dengan berbagai pihak dalam setiap gerakan pelayanan</p>
+                    </div>
+                  </li>
+                  <li className="flex gap-2">
+                    <Heart className="w-4 h-4 text-primary mt-1 shrink-0" />
+                    <div>
+                      <div className="font-bold text-foreground">Jakarta Guyub</div>
+                      <p className="text-sm">Menciptakan budaya organisasi yang berintegritas, profesional, dan menjunjung tinggi rasa kekeluargaan dalam lingkup internal Jakarta Mengabdi</p>
+                    </div>
+                  </li>
                 </ul>
               </motion.div>
             </div>

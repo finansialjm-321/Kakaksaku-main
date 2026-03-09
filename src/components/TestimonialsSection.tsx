@@ -1,62 +1,97 @@
-import { motion } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
-import { Quote } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react"; // Ikon untuk menutup perbesaran
 
-const testimonials = [
-  {
-    name: "Siti Rahayu",
-    role: "Donatur Tetap",
-    text: "Jakarta Mengabdi membuat proses donasi sangat mudah dan transparan. Saya bisa melihat langsung dampak dari setiap kontribusi.",
-  },
-  {
-    name: "Ahmad Fauzi",
-    role: "Relawan",
-    text: "Sebagai relawan, saya bangga menjadi bagian dari gerakan ini. Program-programnya sangat tepat sasaran dan dikelola dengan baik.",
-  },
-  {
-    name: "Maria Dewi",
-    role: "Donatur Kakasaku",
-    text: "Dengan Kakasaku, saya bisa berkontribusi secara rutin tanpa repot. Laporan bulanannya sangat detail dan memuaskan.",
-  },
+const testimonialImages = [
+  "/1.png",
+  "/2.png",
+  "/3.png",
+  "/4.png",
+  "/5.png",
 ];
 
 export default function TestimonialsSection() {
+  // State untuk menyimpan gambar yang sedang diperbesar
+  const [selectedImg, setSelectedImg] = useState<string | null>(null);
+
+  // Duplikasi array untuk looping
+  const duplicatedImages = [...testimonialImages, ...testimonialImages];
+
   return (
-    <section className="py-20 bg-muted/50">
-      <div className="container mx-auto px-4">
+    <section className="py-24 bg-gray-50/50 overflow-hidden relative">
+      <div className="container mx-auto px-4 mb-16">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center"
         >
-          <h2 className="text-3xl md:text-4xl font-extrabold text-foreground mb-3">Kata <span className="text-gradient-gold">Mereka</span></h2>
-          <p className="text-muted-foreground">Cerita dari para donatur dan relawan kami</p>
+          <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Cerita Kebaikan</p>
+          <h2 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+            Kata <span className="text-gradient-gold">Mereka</span>
+          </h2>
         </motion.div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
+      {/* Container Marquee */}
+      <div className="relative w-full overflow-hidden">
+        <motion.div
+          className="flex gap-8 px-4 cursor-pointer"
+          // Animasi berhenti (false) jika ada gambar yang dipilih
+          animate={selectedImg ? false : { x: ["0%", "-50%"] }}
+          transition={{
+            duration: 35,
+            ease: "linear",
+            repeat: Infinity,
+          }}
+        >
+          {duplicatedImages.map((src, index) => (
             <motion.div
-              key={t.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.15 }}
+              key={index}
+              className="flex-shrink-0 w-[300px] md:w-[450px]"
+              whileHover={{ scale: 1.05 }} // Efek angkat sedikit saat mouse di atas gambar
+              onClick={() => setSelectedImg(src)} // Klik untuk perbesar
             >
-              <Card className="shadow-card h-full">
-                <CardContent className="p-6 space-y-4">
-                  <Quote className="w-8 h-8 text-primary/30" />
-                  <p className="text-foreground/80 italic">&ldquo;{t.text}&rdquo;</p>
-                  <div>
-                    <p className="font-semibold text-foreground">{t.name}</p>
-                    <p className="text-sm text-muted-foreground">{t.role}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <img
+                src={src}
+                alt="Testimonial"
+                className="w-full h-auto rounded-[2.5rem] shadow-xl border border-white/20"
+              />
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
+
+      {/* --- MODAL PERBESAR GAMBAR --- */}
+      <AnimatePresence>
+        {selectedImg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-10"
+            onClick={() => setSelectedImg(null)} // Klik di mana saja untuk menutup
+          >
+            {/* Tombol Close */}
+            <button 
+              className="absolute top-10 right-10 text-white hover:rotate-90 transition-transform duration-300"
+              onClick={() => setSelectedImg(null)}
+            >
+              <X size={40} strokeWidth={3} />
+            </button>
+
+            <motion.img
+              src={selectedImg}
+              initial={{ scale: 0.5, y: 100 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="max-w-full max-h-[85vh] rounded-[2.5rem] shadow-2xl border-4 border-white/10"
+              onClick={(e) => e.stopPropagation()} // Cegah klik gambar ikut menutup modal
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

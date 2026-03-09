@@ -165,11 +165,15 @@ export default function KakasakuDashboard() {
       
       <main className="container mx-auto max-w-4xl pt-8 md:pt-12 pb-20 px-4 sm:px-6">
         
-        {/* LOGO KAKAK SAKU */}
+        {/* LOGO KAKAK SAKU - PERBAIKAN: Nama file tanpa spasi & teks warna oranye */}
         <div className="mb-8 flex items-center">
-          <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-orange-500 fill-orange-500/20" />
-            <span className="font-black text-[#1A1A1A] text-base tracking-wider uppercase">Kakak Saku</span>
+          <div className="flex items-center gap-3">
+            <img 
+              src="/FULL_COLOR.png" 
+              alt="Logo Kakak Saku" 
+              className="h-12 w-auto object-contain"
+            />
+            <span className="font-black text-orange-500 text-lg tracking-wider uppercase">Kakak Saku</span>
           </div>
         </div>
 
@@ -364,7 +368,6 @@ export default function KakasakuDashboard() {
                           </div>
                         </div>
 
-                        {/* PERBAIKAN: Mengubah navigasi URL dari /donasi/ID menjadi /donate?program=ID */}
                         <Button 
                           className="w-full rounded-xl bg-orange-50 hover:bg-orange-500 hover:text-white text-orange-600 font-bold transition-colors mt-auto"
                           onClick={() => navigate(`/donate?program=${prog.id}`)}

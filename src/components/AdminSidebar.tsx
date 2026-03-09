@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -25,15 +24,22 @@ const menuItems = [
   { icon: Settings, label: "Program Donasi", href: "/admin/program-donasi" },
 ];
 
+// REVISI: Interface sekarang mendukung kontrol dari luar (Halaman Utama)
 interface SidebarProps {
   isMobileOpen?: boolean;
   setIsMobileOpen?: (open: boolean) => void;
+  isCollapsed: boolean; // Diwajibkan agar margin konten utama sinkron
+  setIsCollapsed: (collapsed: boolean) => void;
 }
 
-export default function AdminSidebar({ isMobileOpen = false, setIsMobileOpen = () => {} }: SidebarProps) {
+export default function AdminSidebar({ 
+  isMobileOpen = false, 
+  setIsMobileOpen = () => {},
+  isCollapsed,
+  setIsCollapsed
+}: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -47,7 +53,7 @@ export default function AdminSidebar({ isMobileOpen = false, setIsMobileOpen = (
 
   return (
     <>
-      {/* 1. MOBILE OVERLAY: Muncul hanya di HP saat menu diklik */}
+      {/* 1. MOBILE OVERLAY */}
       {isMobileOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden transition-opacity duration-300" 
@@ -58,10 +64,10 @@ export default function AdminSidebar({ isMobileOpen = false, setIsMobileOpen = (
       {/* 2. SIDEBAR CONTAINER */}
       <aside 
         className={`fixed left-0 top-0 h-screen bg-[#111111] text-white transition-all duration-500 z-[70] flex flex-col border-r border-white/5 shadow-2xl ${
-          // Mobile Logic
+          // Logic Lebar Mobile
           isMobileOpen ? "translate-x-0 w-[280px]" : "-translate-x-full md:translate-x-0"
         } ${
-          // Desktop Logic (Laptop)
+          // Logic Lebar Desktop (Laptop)
           !isMobileOpen && isCollapsed ? "md:w-20" : "md:w-64"
         }`}
       >
@@ -72,7 +78,7 @@ export default function AdminSidebar({ isMobileOpen = false, setIsMobileOpen = (
               <ShieldCheck className="w-6 h-6 text-black" />
             </div>
             {(!isCollapsed || isMobileOpen) && (
-              <span className="font-black text-sm tracking-widest uppercase text-white truncate animate-in fade-in duration-500">
+              <span className="font-black text-sm tracking-widest uppercase text-white truncate">
                 Admin JM
               </span>
             )}
@@ -103,7 +109,7 @@ export default function AdminSidebar({ isMobileOpen = false, setIsMobileOpen = (
               <Link
                 key={item.href}
                 to={item.href}
-                onClick={() => setIsMobileOpen(false)} // Tutup sidebar di HP setelah klik
+                onClick={() => setIsMobileOpen(false)} 
                 className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${
                   isActive 
                     ? "bg-zinc-500 text-white font-extrabold shadow-lg shadow-zinc-500/20 translate-x-1" 
@@ -147,7 +153,7 @@ export default function AdminSidebar({ isMobileOpen = false, setIsMobileOpen = (
 }
 
 /**
- * 3. MOBILE HEADER (Sticky di paling atas layar HP)
+ * 3. MOBILE HEADER (Menempel di atas HP)
  */
 export function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
   return (
@@ -166,7 +172,6 @@ export function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
         <span className="font-black text-xs tracking-[0.2em] uppercase text-gray-800">Admin JM</span>
       </div>
       
-      {/* Spacer agar logo tetap di tengah */}
       <div className="w-10"></div>
     </div>
   );
