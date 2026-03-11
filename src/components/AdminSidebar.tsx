@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  LayoutDashboard, 
+  LayoutDashboard,
+  UserCheck,
+  FileSpreadsheet, 
   PieChart, 
   Users, 
   Heart, 
@@ -20,6 +23,8 @@ const menuItems = [
   { icon: PieChart, label: "Data Analitik", href: "/admin/analitik" },
   { icon: Users, label: "Data Donatur", href: "/admin/donatur" },
   { icon: Heart, label: "Program Kakaksaku", href: "/admin/program" },
+  { icon: UserCheck, label: "Akun Kakak Saku", href: "/admin/akun-kakak-saku" },
+  { icon: FileSpreadsheet, label: "Laporan Kakaksaku", href: "/admin/laporan-kakasaku" },
   { icon: FileText, label: "Laporan Donasi", href: "/admin/laporan" },
   { icon: Settings, label: "Program Donasi", href: "/admin/program-donasi" },
 ];
@@ -28,8 +33,8 @@ const menuItems = [
 interface SidebarProps {
   isMobileOpen?: boolean;
   setIsMobileOpen?: (open: boolean) => void;
-  isCollapsed: boolean; // Diwajibkan agar margin konten utama sinkron
-  setIsCollapsed: (collapsed: boolean) => void;
+  isCollapsed?: boolean;
+  setIsCollapsed?: (collapsed: boolean) => void;
 }
 
 export default function AdminSidebar({ 
@@ -38,6 +43,9 @@ export default function AdminSidebar({
   isCollapsed,
   setIsCollapsed
 }: SidebarProps) {
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const collapsed = isCollapsed ?? internalCollapsed;
+  const setCollapsed = setIsCollapsed ?? setInternalCollapsed;
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -68,7 +76,7 @@ export default function AdminSidebar({
           isMobileOpen ? "translate-x-0 w-[280px]" : "-translate-x-full md:translate-x-0"
         } ${
           // Logic Lebar Desktop (Laptop)
-          !isMobileOpen && isCollapsed ? "md:w-20" : "md:w-64"
+          !isMobileOpen && collapsed ? "md:w-20" : "md:w-64"
         }`}
       >
         {/* Header: Logo & Toggle */}
@@ -77,7 +85,7 @@ export default function AdminSidebar({
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-400 to-zinc-600 flex items-center justify-center shadow-lg shrink-0">
               <ShieldCheck className="w-6 h-6 text-black" />
             </div>
-            {(!isCollapsed || isMobileOpen) && (
+            {(!collapsed || isMobileOpen) && (
               <span className="font-black text-sm tracking-widest uppercase text-white truncate">
                 Admin JM
               </span>
@@ -87,9 +95,9 @@ export default function AdminSidebar({
           {/* Desktop Toggle Button */}
           <button 
             className="hidden md:flex p-2 rounded-xl bg-white/5 hover:bg-zinc-400 hover:text-black transition-all duration-300 text-zinc-400"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={() => setCollapsed(!collapsed)}
           >
-            <ChevronRight className={`w-4 h-4 transition-transform duration-500 ${isCollapsed ? "" : "rotate-180"}`} />
+            <ChevronRight className={`w-4 h-4 transition-transform duration-500 ${collapsed ? "" : "rotate-180"}`} />
           </button>
 
           {/* Mobile Close Button */}
@@ -120,7 +128,7 @@ export default function AdminSidebar({
                   isActive ? "scale-110 text-white" : "group-hover:scale-110 group-hover:text-zinc-300"
                 }`} />
                 
-                {(!isCollapsed || isMobileOpen) && (
+                {(!collapsed || isMobileOpen) && (
                   <span className="text-sm tracking-wide truncate">
                     {item.label}
                   </span>
@@ -142,7 +150,7 @@ export default function AdminSidebar({
             className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all duration-300 group"
           >
             <LogOut className="w-5 h-5 shrink-0 group-hover:-translate-x-1 transition-transform" />
-            {(!isCollapsed || isMobileOpen) && (
+            {(!collapsed || isMobileOpen) && (
               <span className="text-sm font-black tracking-widest uppercase">Keluar</span>
             )}
           </button>

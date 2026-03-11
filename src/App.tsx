@@ -23,6 +23,8 @@ import DonaturData from "./pages/admin/DonaturData";
 import LaporanDonasi from "./pages/admin/LaporanDonasi";  
 import ProgramDonasi from "./pages/admin/ProgramDonasi";
 import ProgramKakaksakuAdmin from "./pages/admin/ProgramKakaksaku";
+import AkunKakasaku from "./pages/admin/AkunKakasaku";
+import LaporanKakaksaku from "./pages/admin/LaporanKakaksaku";  
 import DataAnalytic from "./pages/admin/DataAnalytic";
 
 // Halaman Kakasaku (Folder: Kakasaku)
@@ -68,6 +70,8 @@ const App = () => (
               <Route path="/admin/laporan" element={<LaporanDonasi />} />
               <Route path="/admin/program-donasi" element={<ProgramDonasi />} />
               <Route path="/admin/program" element={<ProgramKakaksakuAdmin />} />
+              <Route path="/admin/akun-kakak-saku" element={<AkunKakasaku />} />
+              <Route path="/admin/laporan-kakasaku" element={<LaporanKakaksaku />} />
               <Route path="/admin/analitik" element={<DataAnalytic />} />
 
 
