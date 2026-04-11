@@ -1,24 +1,30 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import NotFound from "@/pages/NotFound";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 
-export default function AdminGuard({ children }: { children: React.ReactNode }) {
+interface AdminGuardProps {
+  children: React.ReactNode;
+}
+
+export default function AdminGuard({ children }: AdminGuardProps) {
+  // isAdmin: null (sedang cek), true (admin), false (bukan admin)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const checkRole = async () => {
+    const checkAdminRole = async () => {
       try {
-        // 1. Ambil data user yang sedang login dari session
+        // 1. Ambil data user yang sedang login
+        // Menggunakan getUser() lebih aman daripada getSession() untuk verifikasi server
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-          console.log("Peringatan: Tidak ada session user ditemukan.");
+          console.warn("AdminGuard: Tidak ada session aktif.");
           setIsAdmin(false);
           return;
         }
 
-        // 2. Cek database tabel 'profiles' untuk memastikan role-nya
+        // 2. Ambil role dari tabel profiles berdasarkan ID user
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
@@ -26,47 +32,48 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
           .single();
 
         if (profileError) {
-          console.error("Error mengambil profil:", profileError.message);
+          console.error("AdminGuard Error (Fetch Profile):", profileError.message);
           setIsAdmin(false);
           return;
         }
 
-        // 3. Validasi Role (Hanya string 'admin' yang lolos)
+        // 3. Validasi ketat: Harus string 'admin'
         if (profile?.role === 'admin') {
-          console.log("Akses Diterima: User adalah Admin.");
+          console.log("AdminGuard: Akses diberikan untuk Admin.");
           setIsAdmin(true);
         } else {
-          // Jika role adalah 'donatur' atau lainnya, lempar ke 404
-          console.log(`Akses Ditolak: Role '${profile?.role}' tidak diizinkan di sini.`);
+          console.log(`AdminGuard: Akses ditolak. Role Anda adalah '${profile?.role}'`);
           setIsAdmin(false);
         }
-
       } catch (err) {
-        console.error("Security Guard Error:", err);
+        console.error("AdminGuard Critical Error:", err);
         setIsAdmin(false);
       }
     };
 
-    checkRole();
+    checkAdminRole();
   }, []);
 
-  // Tampilan Loading saat proses verifikasi database
+  // --- TAMPILAN LOADING (Sangat penting agar tidak bocor) ---
   if (isAdmin === null) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFCFB]">
-        <Loader2 className="w-12 h-12 animate-spin text-orange-500 mb-4" />
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
-          Memverifikasi Otoritas...
-        </p>
+        <div className="relative mb-6">
+          <div className="w-20 h-20 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin" />
+          <ShieldCheck className="absolute inset-0 m-auto text-orange-500 w-8 h-8" />
+        </div>
+        <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.3em] animate-pulse">
+          Memverifikasi Otoritas
+        </h2>
       </div>
     );
   }
 
-  // JIKA BUKAN ADMIN (ROLE DONATUR / TIDAK LOGIN) -> TAMPILKAN 404
+  // --- JIKA BUKAN ADMIN (DONATUR / GUEST) -> LEMPAR KE 404 ---
   if (!isAdmin) {
     return <NotFound />;
   }
 
-  // JIKA ADMIN -> TAMPILKAN HALAMAN ADMIN
+  // --- JIKA LOLOS VALIDASI -> TAMPILKAN KONTEN ADMIN ---
   return <>{children}</>;
 }
