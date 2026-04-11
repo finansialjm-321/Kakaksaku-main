@@ -7,46 +7,66 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      // 1. Cek apakah ada user yang login
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
+    const checkRole = async () => {
+      try {
+        // 1. Ambil data user yang sedang login dari session
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-      // 2. Cek role di tabel profiles
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+        if (authError || !user) {
+          console.log("Peringatan: Tidak ada session user ditemukan.");
+          setIsAdmin(false);
+          return;
+        }
 
-      if (profile?.role === 'admin') {
-        setIsAdmin(true);
-      } else {
+        // 2. Cek database tabel 'profiles' untuk memastikan role-nya
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error mengambil profil:", profileError.message);
+          setIsAdmin(false);
+          return;
+        }
+
+        // 3. Validasi Role (Hanya string 'admin' yang lolos)
+        if (profile?.role === 'admin') {
+          console.log("Akses Diterima: User adalah Admin.");
+          setIsAdmin(true);
+        } else {
+          // Jika role adalah 'donatur' atau lainnya, lempar ke 404
+          console.log(`Akses Ditolak: Role '${profile?.role}' tidak diizinkan di sini.`);
+          setIsAdmin(false);
+        }
+
+      } catch (err) {
+        console.error("Security Guard Error:", err);
         setIsAdmin(false);
       }
     };
 
-    checkAdminStatus();
+    checkRole();
   }, []);
 
-  // Tampilan saat sedang loading mengecek database
+  // Tampilan Loading saat proses verifikasi database
   if (isAdmin === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFCFB]">
+        <Loader2 className="w-12 h-12 animate-spin text-orange-500 mb-4" />
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
+          Memverifikasi Otoritas...
+        </p>
       </div>
     );
   }
 
-  // JIKA BUKAN ADMIN, TAMPILKAN 404 (Halaman Tidak Ditemukan)
+  // JIKA BUKAN ADMIN (ROLE DONATUR / TIDAK LOGIN) -> TAMPILKAN 404
   if (!isAdmin) {
     return <NotFound />;
   }
 
-  // JIKA ADMIN, IZINKAN MASUK
+  // JIKA ADMIN -> TAMPILKAN HALAMAN ADMIN
   return <>{children}</>;
 }

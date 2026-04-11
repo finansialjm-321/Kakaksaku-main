@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
-import AdminGuard from "./components/AdminGuard";
+import AdminGuard from "@/components/AdminGuard";
 
 // Halaman Utama
 import Index from "./pages/Index";
@@ -75,7 +75,7 @@ const App = () => (
               <Route path="/kakasaku/bayar-tagihan" element={<KakasakuPayBill />} />
               <Route path="/kakasaku/riwayat" element={<KakasakuHistory />} />``
 
-              {/* Admin Routes */}
+              {/* Admin Routes - Terkunci Berdasarkan Role */}
               <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
               <Route path="/admin/donatur" element={<AdminGuard><DonaturData /></AdminGuard>} />
               <Route path="/admin/laporan" element={<AdminGuard><LaporanDonasi /></AdminGuard>} />
@@ -84,6 +84,7 @@ const App = () => (
               <Route path="/admin/akun-kakak-saku" element={<AdminGuard><AkunKakasaku /></AdminGuard>} />
               <Route path="/admin/laporan-kakasaku" element={<AdminGuard><LaporanKakaksaku /></AdminGuard>} />
               <Route path="/admin/analitik" element={<AdminGuard><DataAnalytic /></AdminGuard>} />
+
 
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
