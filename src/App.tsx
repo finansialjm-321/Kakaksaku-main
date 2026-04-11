@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import AdminGuard from "./components/AdminGuard";
 
 // Halaman Utama
 import Index from "./pages/Index";
@@ -75,15 +76,14 @@ const App = () => (
               <Route path="/kakasaku/riwayat" element={<KakasakuHistory />} />``
 
               {/* Admin Routes */}
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/donatur" element={<DonaturData />} />
-              <Route path="/admin/laporan" element={<LaporanDonasi />} />
-              <Route path="/admin/program-donasi" element={<ProgramDonasi />} />
-              <Route path="/admin/program" element={<ProgramKakaksakuAdmin />} />
-              <Route path="/admin/akun-kakak-saku" element={<AkunKakasaku />} />
-              <Route path="/admin/laporan-kakasaku" element={<LaporanKakaksaku />} />
-              <Route path="/admin/analitik" element={<DataAnalytic />} />
-
+              <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+              <Route path="/admin/donatur" element={<AdminGuard><DonaturData /></AdminGuard>} />
+              <Route path="/admin/laporan" element={<AdminGuard><LaporanDonasi /></AdminGuard>} />
+              <Route path="/admin/program-donasi" element={<AdminGuard><ProgramDonasi /></AdminGuard>} />
+              <Route path="/admin/program" element={<AdminGuard><ProgramKakaksakuAdmin /></AdminGuard>} />
+              <Route path="/admin/akun-kakak-saku" element={<AdminGuard><AkunKakasaku /></AdminGuard>} />
+              <Route path="/admin/laporan-kakasaku" element={<AdminGuard><LaporanKakaksaku /></AdminGuard>} />
+              <Route path="/admin/analitik" element={<AdminGuard><DataAnalytic /></AdminGuard>} />
 
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
