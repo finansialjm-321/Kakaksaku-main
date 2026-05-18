@@ -24,23 +24,27 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // LOGIKA ON/OFF PENDAFTARAN
-  const [isRegOpen, setIsRegOpen] = useState<boolean | null>(null);
+  // LOGIKA BATCH MODE PENDAFTARAN
+  const [batchMode, setBatchMode] = useState<'none' | 'batch1' | 'batch2' | 'both' | null>(null);
   
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Cek Status Pendaftaran dari Database
+  // Cek Batch Mode Pendaftaran dari Database
   useEffect(() => {
     const checkStatus = async () => {
-      const { data } = await supabase
-        .from('site_settings')
-        .select('value_bool')
-        .eq('key', 'kakaksaku_reg_open')
-        .single();
-      
-      // Default ke true jika data tidak ditemukan
-      setIsRegOpen(data?.value_bool ?? true);
+      try {
+        const { data } = await supabase
+          .from('site_settings')
+          .select('value_text')
+          .eq('key', 'kakaksaku_batch_mode')
+          .maybeSingle();
+        
+        setBatchMode((data?.value_text as any) ?? 'both');
+      } catch (error) {
+        console.error('Error fetching batch mode:', error);
+        setBatchMode('both');
+      }
     };
     checkStatus();
   }, []);
@@ -65,6 +69,12 @@ export default function Register() {
       if (authError) throw authError;
 
       if (data.user) {
+        // MENENTUKAN BATCH USER SECARA OTOMATIS
+        // Jika admin membuka 'both', default pendaftar baru masuk ke 'batch1' (atau sesuaikan kebutuhan bisnis)
+        const assignedBatch = batchMode && batchMode !== 'none' 
+          ? (batchMode === 'both' ? 'batch1' : batchMode) 
+          : 'batch1';
+
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert([
@@ -76,7 +86,8 @@ export default function Register() {
               tanggal_lahir: tanggalLahir || null,
               jenis_kelamin: jenisKelamin, 
               kesibukan: kesibukan,
-              role: 'donatur' 
+              role: 'donatur',
+              kakaksaku_batch: assignedBatch // Sinkron dengan kolom profiles database
             }
           ], { onConflict: 'id' });
 
@@ -103,7 +114,7 @@ export default function Register() {
   };
 
   // 1. TAMPILAN LOADING SAAT CEK STATUS
-  if (isRegOpen === null) {
+  if (batchMode === null) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 p-4">
         <Loader2 className="w-10 h-10 animate-spin text-gold mb-4" />
@@ -112,8 +123,8 @@ export default function Register() {
     );
   }
 
-  // 2. TAMPILAN JIKA PENDAFTARAN DITUTUP (OFF)
-  if (!isRegOpen) {
+  // 2. TAMPILAN JIKA PENDAFTARAN DITUTUP (BATCH MODE = NONE)
+  if (batchMode === 'none') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-6">
         <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-500">

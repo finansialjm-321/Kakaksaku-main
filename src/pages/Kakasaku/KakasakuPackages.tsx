@@ -28,7 +28,19 @@ export default function KakasakuPackages() {
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUserProfile({ id: user.id, email: user.email, name: user.user_metadata?.full_name || 'Donatur' });
+        // PERBAIKAN BATCH: Ambil data profile donatur untuk mengetahui batch pendaftarannya
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('kakaksaku_batch')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        setUserProfile({ 
+          id: user.id, 
+          email: user.email, 
+          name: user.user_metadata?.full_name || 'Donatur',
+          batch: profileData?.kakaksaku_batch || 'batch1' // Default ke batch1 jika tidak ditemukan
+        });
       } else {
         navigate('/login');
         return;
@@ -90,11 +102,14 @@ export default function KakasakuPackages() {
     setLoading(true);
     
     try {
+      // PERBAIKAN BATCH: Menyertakan kolom batch donatur saat mendaftarkan paket komitmen baru
       const { error: dbError } = await supabase.from('kakasaku_subscriptions').upsert({
         user_id: userProfile.id,
         package_id: selectedPkg.id,
         amount: finalAmount, 
         status: 'active', 
+        batch: userProfile.batch, // Menyimpan status batch (batch1 / batch2) ke database subscriptions
+        notes: note || null // Mengamankan catatan pesan doa opsional agar ikut tersimpan
       }, { onConflict: 'user_id' });
 
       if (dbError) throw new Error(`Gagal menyimpan pilihan paket: ${dbError.message}`);
@@ -133,7 +148,7 @@ export default function KakasakuPackages() {
           <div className="bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-black mb-2 text-[#1A1A1A]">Kamu Sudah Berlangganan!</h2>
+          <div className="text-2xl font-black mb-2 text-[#1A1A1A]">Kamu Sudah Berlangganan!</div>
           <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
             Sistem mendeteksi bahwa kamu sudah memiliki paket Kakak Saku yang aktif. Sesuai ketentuan, satu akun hanya dapat memiliki satu paket komitmen rutin.
           </p>
@@ -156,7 +171,7 @@ export default function KakasakuPackages() {
           </Button>
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-[#1A1A1A]">Pilih Paket Kakak Saku</h1>
-            <p className="text-muted-foreground text-sm mt-1">Tentukan komitmen rutin bulananmu untuk adik-adik di Jakarta.</p>
+            <p className="text-muted-foreground text-sm mt-1">Tentukan komitmen rutin bulananmu untuk adik-adip di Jakarta.</p>
           </div>
         </div>
 
@@ -257,7 +272,7 @@ export default function KakasakuPackages() {
                 <div>
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Paket Terpilih</p>
                   <p className="font-black text-lg text-[#1A1A1A] leading-none mb-2">{selectedPkg.name}</p>
-                  <p className="text-[11px] text-gray-400 font-medium">Akun: {userProfile?.email}</p>
+                  <p className="text-[11px] text-gray-400 font-medium">Akun: {userProfile?.email} ({userProfile?.batch === 'batch2' ? 'Batch 2' : 'Batch 1'})</p>
                 </div>
                 
                 <div className="sm:text-right w-full sm:w-auto border-t sm:border-t-0 pt-4 sm:pt-0 border-gray-200">
@@ -313,7 +328,7 @@ export default function KakasakuPackages() {
               >
                 {loading 
                   ? 'Menyimpan...' 
-                  : isJayawijayaInvalid 
+                    : isJayawijayaInvalid 
                     ? 'Nominal Minimal Rp 150.001' 
                     : 'Lanjut Simpan Paket Kakak Saku'}
               </Button>
@@ -333,7 +348,7 @@ export default function KakasakuPackages() {
                 <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-20"></div>
                 <CheckCircle2 className="w-12 h-12 relative z-10" />
               </div>
-              <h3 className="text-2xl font-black text-[#1A1A1A] mb-3">Berhasil Tersimpan!</h3>
+              <div className="text-2xl font-black text-[#1A1A1A] mb-3">Berhasil Tersimpan!</div>
               <p className="text-gray-500 mb-8 text-sm leading-relaxed">
                 Komitmen paket Kakak Saku kamu sudah dicatat. Yuk, kembali ke Dashboard untuk menyelesaikan tagihan pertamamu.
               </p>
@@ -356,7 +371,7 @@ export default function KakasakuPackages() {
               <div className="w-24 h-24 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner relative">
                 <AlertCircle className="w-12 h-12 relative z-10" />
               </div>
-              <h3 className="text-2xl font-black text-[#1A1A1A] mb-3">Yah, Gagal!</h3>
+              <div className="text-2xl font-black text-[#1A1A1A] mb-3">Yah, Gagal!</div>
               <p className="text-gray-500 mb-8 text-sm leading-relaxed">
                 {errorMessage}
               </p>

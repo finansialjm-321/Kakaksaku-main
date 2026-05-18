@@ -26,6 +26,7 @@ export default function KakasakuPayBill() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [userBatch, setUserBatch] = useState<'batch1' | 'batch2'>('batch1');
   
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
   const [selectedBillIds, setSelectedBillIds] = useState<string[]>([]);
@@ -55,6 +56,9 @@ export default function KakasakuPayBill() {
         
       if (subscription) {
         setSubData(subscription);
+        // PERBAIKAN: Ambil dari subscription.batch, jika kosong fallback ke profileData.kakaksaku_batch
+        setUserBatch(subscription.batch || profileData?.kakaksaku_batch || 'batch1');
+        
         const { data: payments } = await supabase
           .from('kakasaku_payments')
           .select('bill_reff')
@@ -89,11 +93,19 @@ export default function KakasakuPayBill() {
       const isBeforeJoin = currentVal < joinValue;
       const isPaid = paidBillIds.includes(id);
 
-      // --- LOGIK BARU: Batasi Desember ---
-      const isDecember = m === 12; 
+      // --- BATCH LOCK LOGIC ---
+      // Batch 2: Maret sampai Mei (bulan 3-5) di-lock total
+      const isBatch2LockedMonth = userBatch === 'batch2' && m >= 3 && m <= 5;
+      
+      // Januari (1), Februari (2), dan Desember (12) ditutup total untuk seluruh batch
+      const isOffSeasonMonth = m === 1 || m === 2 || m === 12; 
+
+      // Tentukan bulan pertama aktif bayar berdasarkan jenis Batch
+      const startMonthNum = userBatch === 'batch2' ? 6 : 3;
 
       let isSequentialValid = true;
-      if (!isBeforeJoin && !isPaid && !isDecember) {
+      // Jalankan validasi berurutan HANYA jika bukan bulan pertama pembayaran di batch tersebut
+      if (!isBeforeJoin && !isPaid && !isOffSeasonMonth && !isBatch2LockedMonth && m !== startMonthNum) {
           let prevM = m - 1;
           let prevY = y;
           if (prevM === 0) { prevM = 12; prevY -= 1; }
@@ -104,8 +116,8 @@ export default function KakasakuPayBill() {
           }
       }
 
-      // Desember otomatis isDisabled
-      const isDisabled = isBeforeJoin || isPaid || !isSequentialValid || isDecember;
+      // Gabungkan semua kondisi disable tombol klik
+      const isDisabled = isBeforeJoin || isPaid || !isSequentialValid || isOffSeasonMonth || isBatch2LockedMonth;
 
       return {
         id,
@@ -114,10 +126,11 @@ export default function KakasakuPayBill() {
         amount: subData?.amount || 0,
         isDisabled,
         isPaid,
-        isDecember // Flag untuk UI
+        isDecember: m === 12, // Dipertahankan agar tidak mengubah properti UI bawaan
+        isBatch2Locked: isBatch2LockedMonth
       };
     });
-  }, [currentYear, subData, paidBillIds, selectedBillIds]);
+  }, [currentYear, subData, paidBillIds, selectedBillIds, userBatch]);
 
   const toggleBill = (bill: any) => {
     if (bill.isDisabled && !selectedBillIds.includes(bill.id)) return; 
@@ -137,8 +150,10 @@ export default function KakasakuPayBill() {
     const joinVal = getMonthValue(`${joinDate.getMonth() + 1}-${joinDate.getFullYear()}`);
     
     let unpaidIdsThisYear: string[] = [];
-    // --- LOGIK BARU: Perulangan hanya sampai m=11 (November) ---
-    for (let m = 1; m <= 11; m++) {
+    // PERBAIKAN: Batch 2 mulai dari Juni (6), Batch 1 mulai dari Maret (3)
+    const startMonth = userBatch === 'batch2' ? 6 : 3;
+    
+    for (let m = startMonth; m <= 11; m++) {
        const id = `${m}-${currentYear}`;
        const val = getMonthValue(id);
        if (val >= joinVal && !paidBillIds.includes(id)) {
@@ -220,7 +235,11 @@ export default function KakasakuPayBill() {
           </Button>
           <div>
             <h1 className="text-2xl font-black text-[#1A1A1A]">Pilih Bulan Tagihan</h1>
-            <p className="text-muted-foreground text-sm">Pembayaran hanya tersedia sampai bulan November.</p>
+            <p className="text-muted-foreground text-sm">
+              {userBatch === 'batch2' 
+                ? 'Pembayaran tersedia Juni hingga November (Batch 2).' 
+                : 'Pembayaran tersedia Maret hingga November (Batch 1).'}
+            </p>
           </div>
         </div>
 
@@ -250,9 +269,11 @@ export default function KakasakuPayBill() {
             return (
               <div 
                 key={bill.id}
-                onClick={() => !bill.isDecember && toggleBill(bill)}
+                onClick={() => !bill.isDisabled && toggleBill(bill)}
                 className={`relative flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 transition-all overflow-hidden
-                  ${bill.isDecember 
+                  ${bill.isBatch2Locked
+                    ? 'border-purple-100 bg-purple-50/50 opacity-60 cursor-not-allowed' 
+                    : bill.isDecember 
                     ? 'border-gray-50 bg-gray-50/50 opacity-40 cursor-not-allowed' 
                     : bill.isDisabled && !isSelected 
                       ? 'border-gray-50 bg-gray-50/50 opacity-50 cursor-not-allowed' 
@@ -261,6 +282,11 @@ export default function KakasakuPayBill() {
                         : 'border-gray-100 bg-white hover:border-orange-200 cursor-pointer'
                   }`}
               >
+                {bill.isBatch2Locked && (
+                  <div className="absolute top-1 right-1 bg-purple-200 text-purple-700 text-[8px] px-2 py-0.5 rounded-full font-bold uppercase">
+                    Batch 2
+                  </div>
+                )}
                 {bill.isDecember && (
                   <div className="absolute top-2 right-2">
                     <Lock className="w-4 h-4 text-gray-400" />
@@ -271,10 +297,10 @@ export default function KakasakuPayBill() {
                     LUNAS
                   </div>
                 )}
-                <span className={`text-sm font-bold mb-1 ${bill.isDecember || (bill.isDisabled && !isSelected) ? 'text-gray-400' : 'text-gray-500'}`}>
+                <span className={`text-sm font-bold mb-1 ${bill.isDisabled && !isSelected ? 'text-gray-400' : 'text-gray-500'}`}>
                   {bill.month}
                 </span>
-                <span className={`text-sm font-black ${bill.isDecember || (bill.isDisabled && !isSelected) ? 'text-gray-300' : 'text-[#1A1A1A]'}`}>
+                <span className={`text-sm font-black ${bill.isDisabled && !isSelected ? 'text-gray-300' : 'text-[#1A1A1A]'}`}>
                   Rp{(bill.amount / 1000)}k
                 </span>
               </div>

@@ -16,9 +16,9 @@ export default function ProgramKakaksaku() {
   const [filterNama, setFilterNama] = useState("");
   const [loading, setLoading] = useState(true);
   
-  // NEW STATE: Kontrol Registrasi
-  const [isRegOpen, setIsRegOpen] = useState<boolean>(true);
-  const [isUpdatingReg, setIsUpdatingReg] = useState(false);
+  // NEW STATE: Kontrol Registrasi dengan Batch
+  const [batchMode, setBatchMode] = useState<'none' | 'batch1' | 'batch2' | 'both'>('none');
+  const [isUpdatingBatch, setIsUpdatingBatch] = useState(false);
 
   // STATE SIDEBAR
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -26,34 +26,80 @@ export default function ProgramKakaksaku() {
 
   useEffect(() => {
     fetchData();
-    fetchRegStatus(); // Ambil status reg saat load
+    fetchBatchStatus();
   }, []);
 
-  const fetchRegStatus = async () => {
-    const { data } = await supabase
-      .from('site_settings')
-      .select('value_bool')
-      .eq('key', 'kakaksaku_reg_open')
-      .single();
-    if (data) setIsRegOpen(data.value_bool);
+  const fetchBatchStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('value_text')
+        .eq('key', 'kakaksaku_batch_mode')
+        .maybeSingle();
+      
+      if (data?.value_text) {
+        setBatchMode(data.value_text as any);
+      } else {
+        setBatchMode('both');
+      }
+    } catch (err) {
+      console.error('Error fetching batch status:', err);
+      setBatchMode('both');
+    }
   };
 
-  const handleToggleReg = async () => {
-    setIsUpdatingReg(true);
-    const nextStatus = !isRegOpen;
+  const handleToggleBatch = async (batch: 'batch1' | 'batch2' | 'none') => {
+    setIsUpdatingBatch(true);
+    let newMode: 'none' | 'batch1' | 'batch2' | 'both' = 'none';
     
-    const { error } = await supabase
-      .from('site_settings')
-      .update({ value_bool: nextStatus })
-      .eq('key', 'kakaksaku_reg_open');
-
-    if (!error) {
-      setIsRegOpen(nextStatus);
-      toast.success(`Pendaftaran Kakak Saku resmi di${nextStatus ? 'buka' : 'tutup'}!`);
+    // Logika penentuan mode pendaftaran baru
+    if (batch === 'none') {
+      newMode = 'none';
     } else {
-      toast.error("Gagal memperbarui status pendaftaran.");
+      if (batchMode === 'none') {
+        newMode = batch;
+      } else if (batchMode === batch) {
+        newMode = 'none';
+      } else if (batchMode === 'batch1' && batch === 'batch2') {
+        newMode = 'both';
+      } else if (batchMode === 'batch2' && batch === 'batch1') {
+        newMode = 'both';
+      } else if (batchMode === 'both') {
+        newMode = batch === 'batch1' ? 'batch2' : 'batch1';
+      }
     }
-    setIsUpdatingReg(false);
+    
+    try {
+      // Periksa apakah data sudah ada di database
+      const { data: existingData } = await supabase
+        .from('site_settings')
+        .select('key')
+        .eq('key', 'kakaksaku_batch_mode')
+        .maybeSingle();
+
+      let result;
+      if (existingData?.key) {
+        result = await supabase
+          .from('site_settings')
+          .update({ value_text: newMode })
+          .eq('key', 'kakaksaku_batch_mode');
+      } else {
+        result = await supabase
+          .from('site_settings')
+          .insert({ key: 'kakaksaku_batch_mode', value_text: newMode });
+      }
+
+      if (result.error) throw result.error;
+
+      setBatchMode(newMode);
+      const batchText = newMode === 'none' ? 'DITUTUP' : newMode === 'both' ? 'Batch 1 & 2 DIBUKA' : `${newMode.toUpperCase()} DIBUKA`;
+      toast.success(`Pendaftaran Kakak Saku: ${batchText}`);
+    } catch (error: any) {
+      console.error('Error updating batch mode:', error);
+      toast.error(error.message || "Gagal memperbarui batch mode.");
+    } finally {
+      setIsUpdatingBatch(false);
+    }
   };
 
   const fetchData = async () => {
@@ -148,32 +194,59 @@ export default function ProgramKakaksaku() {
           isCollapsed ? "md:ml-20" : "md:ml-64"
         }`}>
           
-          {/* SECTION: TOGGLE REGISTRASI KAKAK SAKU */}
-          <div className="bg-white p-8 md:p-10 rounded-[3rem] border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:border-orange-100">
+          {/* SECTION: BATCH MODE PENDAFTARAN KAKAK SAKU */}
+          <div className="bg-white p-8 md:p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-6 transition-all hover:border-orange-100">
             <div className="flex items-center gap-6">
               <div className={`w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all ${
-                isRegOpen ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500 animate-pulse'
+                batchMode === 'none' ? 'bg-red-50 text-red-500 animate-pulse' : 'bg-green-50 text-green-500'
               }`}>
-                {isRegOpen ? <Power size={32} /> : <ShieldAlert size={32} />}
+                {batchMode === 'none' ? <ShieldAlert size={32} /> : <Power size={32} />}
               </div>
               <div>
                 <h3 className="text-xl font-black text-[#1A1A1A]">Pendaftaran Kakak Saku</h3>
                 <p className="text-xs text-gray-400 font-bold uppercase tracking-[0.2em] mt-1">
-                  Status: {isRegOpen ? 'DIBUKA UNTUK UMUM' : 'SEDANG DITUTUP'}
+                  Status: {batchMode === 'none' ? 'DITUTUP' : batchMode === 'both' ? 'BATCH 1 & 2 DIBUKA' : `${batchMode.toUpperCase()} DIBUKA ${batchMode === 'batch1' ? '(Mar-Nov)' : '(Jun-Nov)'}`}
                 </p>
               </div>
             </div>
-            <Button 
-              disabled={isUpdatingReg}
-              onClick={handleToggleReg}
-              className={`w-full md:w-auto px-12 h-16 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
-                isRegOpen 
-                ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-100' 
-                : 'bg-green-500 text-white hover:bg-green-600 shadow-green-100'
-              }`}
-            >
-              {isUpdatingReg ? <Loader2 className="animate-spin" /> : (isRegOpen ? "Tutup Pendaftaran" : "Buka Pendaftaran")}
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+              <Button 
+                disabled={isUpdatingBatch}
+                onClick={() => handleToggleBatch('batch1')}
+                className={`px-8 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 ${
+                  (batchMode === 'batch1' || batchMode === 'both')
+                  ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-blue-100' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {isUpdatingBatch ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                Batch 1 (Mar-Nov)
+              </Button>
+              <Button 
+                disabled={isUpdatingBatch}
+                onClick={() => handleToggleBatch('batch2')}
+                className={`px-8 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 ${
+                  (batchMode === 'batch2' || batchMode === 'both')
+                  ? 'bg-purple-500 text-white hover:bg-purple-600 shadow-purple-100' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {isUpdatingBatch ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                Batch 2 (Jun-Nov)
+              </Button>
+              <Button 
+                disabled={isUpdatingBatch}
+                onClick={() => handleToggleBatch('none')}
+                className={`px-8 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 ${
+                  batchMode === 'none'
+                  ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-100 border-transparent' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {isUpdatingBatch ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                Tutup Pendaftaran
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
