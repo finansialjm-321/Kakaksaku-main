@@ -3,20 +3,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   Users, CheckCircle2, Clock, 
   MessageCircle, Search, Tag, 
-  ShieldCheck, Loader2, Power, ShieldAlert
+  ShieldCheck, Loader2, Power, ShieldAlert,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdminSidebar, { MobileHeader } from "@/components/AdminSidebar"; 
-import { toast } from "sonner"; // Pastikan sonner terinstal
+import { toast } from "sonner"; 
 
 export default function ProgramKakaksaku() {
   const [listDonatur, setListDonatur] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string>("all");
+  const [selectedBatchFilter, setSelectedBatchFilter] = useState<'all' | 'batch1' | 'batch2'>('all');
   const [filterNama, setFilterNama] = useState("");
   const [loading, setLoading] = useState(true);
   
-  // NEW STATE: Kontrol Registrasi dengan Batch
+  // Kontrol Registrasi dengan Batch
   const [batchMode, setBatchMode] = useState<'none' | 'batch1' | 'batch2' | 'both'>('none');
   const [isUpdatingBatch, setIsUpdatingBatch] = useState(false);
 
@@ -52,7 +54,6 @@ export default function ProgramKakaksaku() {
     setIsUpdatingBatch(true);
     let newMode: 'none' | 'batch1' | 'batch2' | 'both' = 'none';
     
-    // Logika penentuan mode pendaftaran baru
     if (batch === 'none') {
       newMode = 'none';
     } else {
@@ -70,7 +71,6 @@ export default function ProgramKakaksaku() {
     }
     
     try {
-      // Periksa apakah data sudah ada di database
       const { data: existingData } = await supabase
         .from('site_settings')
         .select('key')
@@ -105,30 +105,94 @@ export default function ProgramKakaksaku() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // 1. Ambil data paket donasi
       const { data: pkgData } = await supabase.from('kakasaku_packages').select('id, name, amount').eq('is_active', true);
       if (pkgData) setPackages(pkgData);
 
-      const { data: monitorData, error } = await supabase.from('admin_kakasaku_monitoring').select('*');
-      if (error) throw error;
+      // 2. Ambil data langganan yang AKTIF
+      const { data: subsData, error: subError } = await supabase
+        .from('kakasaku_subscriptions')
+        .select('*')
+        .eq('status', 'active');
+      
+      if (subError) throw subError;
 
-      if (monitorData && monitorData.length > 0) {
-        const subIds = monitorData.map(d => d.sub_id);
-        const { data: payData } = await supabase
-          .from('kakasaku_payments')
-          .select('subscription_id, bill_reff, status')
-          .in('subscription_id', subIds)
-          .in('status', ['success', 'settled', 'paid'])
-          .order('created_at', { ascending: false });
+      if (subsData && subsData.length > 0) {
+        // 3. Ambil data profil & pembayaran SECARA KESELURUHAN (Menghindari Limit Karakter URL)
+        const [profilesRes, payRes] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, nama_lengkap, no_wa, kakaksaku_batch'),
+          supabase
+            .from('kakasaku_payments')
+            .select('subscription_id, bill_reff, status, created_at')
+            .in('status', ['success', 'settled', 'paid'])
+            .order('created_at', { ascending: false })
+        ]);
 
-        const finalData = monitorData.map(donatur => {
-          const lastPayment = payData?.find(p => p.subscription_id === donatur.sub_id);
+        const profilesData = profilesRes.data || [];
+        const payData = payRes.data || [];
+
+        // WAKTU SAAT INI (REALTIME BULAN & TAHUN)
+        const now = new Date();
+        const currentMonthVal = now.getFullYear() * 12 + (now.getMonth() + 1);
+        const currentMonthOnly = now.getMonth() + 1;
+
+        // 4. Gabungkan semua data dengan logika perhitungan bulan
+        const finalData = subsData.map(sub => {
+          const profile = profilesData.find(p => p.id === sub.user_id);
+          const pkg = pkgData?.find(p => p.id === sub.package_id);
+          const userBatch = sub.batch || profile?.kakaksaku_batch || 'batch1';
+          
+          // Ambil seluruh riwayat bayar sukses milik user ini
+          const subPayments = payData.filter(p => p.subscription_id === sub.id);
+          const lastPayment = subPayments.length > 0 ? subPayments[0] : null;
+
+          // CARI BULAN TERAKHIR DIBAYAR (Dari parsing teks tagihan)
+          let lastPaidMonthVal = 0;
+          subPayments.forEach(p => {
+            const match = p.bill_reff?.match(/\d+-\d+/g); // Ekstrak pola "Bulan-Tahun" misal "3-2026"
+            if (match) {
+              match.forEach(m => {
+                const [mVal, yVal] = m.split('-').map(Number);
+                const val = yVal * 12 + mVal;
+                if (val > lastPaidMonthVal) lastPaidMonthVal = val;
+              });
+            }
+          });
+
+          // Jika user belum pernah bayar sama sekali, set beban dari bulan bergabung
+          if (lastPaidMonthVal === 0) {
+            const joinDate = new Date(sub.created_at || now);
+            lastPaidMonthVal = joinDate.getFullYear() * 12 + (joinDate.getMonth() + 1) - 1; 
+          }
+
+          // KONDISI PENGINGAT REALTIME:
+          // Status LUNAS (Aman) = jika bulan terakhir dibayar sudah melewati atau sama dengan bulan saat ini.
+          let isLunas = lastPaidMonthVal >= currentMonthVal;
+
+          // Toleransi / Grace Period untuk donatur Batch 2:
+          // Jika bulan ini sebelum Juni (Bulan 6), jangan tagih mereka
+          if (userBatch === 'batch2' && currentMonthOnly < 6) {
+            isLunas = true;
+          }
+
           return {
-            ...donatur,
+            sub_id: sub.id,
+            user_id: sub.user_id,
+            nama_lengkap: profile?.nama_lengkap || 'Tanpa Nama',
+            no_wa: profile?.no_wa || '-',
+            package_id: sub.package_id,
+            package_name: pkg?.name || 'Paket Kakak Saku',
+            user_batch: userBatch, 
             bill_reff: lastPayment ? lastPayment.bill_reff : null,
-            status_bayar: lastPayment ? 'success' : donatur.status_bayar 
+            status_bayar: isLunas ? 'success' : 'pending' 
           };
         });
+        
         setListDonatur(finalData);
+      } else {
+        setListDonatur([]);
       }
     } catch (err: any) {
       console.error("Kesalahan sistem:", err.message);
@@ -167,15 +231,29 @@ export default function ProgramKakaksaku() {
     return "";
   };
 
+  // LOGIKA STATISTIK KPI (TOTAL AKUMULASI & PER BATCH)
   const stats = {
-    total: listDonatur.length,
-    lunas: listDonatur.filter(d => d.status_bayar === 'success' || d.status_bayar === 'settled').length,
-    sisa: listDonatur.length - listDonatur.filter(d => d.status_bayar === 'success' || d.status_bayar === 'settled').length
+    // Total Keseluruhan
+    totalAll: listDonatur.length,
+    lunasAll: listDonatur.filter(d => d.status_bayar === 'success' || d.status_bayar === 'settled').length,
+    sisaAll: listDonatur.length - listDonatur.filter(d => d.status_bayar === 'success' || d.status_bayar === 'settled').length,
+
+    // Batch 1
+    totalB1: listDonatur.filter(d => d.user_batch === 'batch1').length,
+    lunasB1: listDonatur.filter(d => d.user_batch === 'batch1' && (d.status_bayar === 'success' || d.status_bayar === 'settled')).length,
+    sisaB1: listDonatur.filter(d => d.user_batch === 'batch1').length - listDonatur.filter(d => d.user_batch === 'batch1' && (d.status_bayar === 'success' || d.status_bayar === 'settled')).length,
+
+    // Batch 2
+    totalB2: listDonatur.filter(d => d.user_batch === 'batch2').length,
+    lunasB2: listDonatur.filter(d => d.user_batch === 'batch2' && (d.status_bayar === 'success' || d.status_bayar === 'settled')).length,
+    sisaB2: listDonatur.filter(d => d.user_batch === 'batch2').length - listDonatur.filter(d => d.user_batch === 'batch2' && (d.status_bayar === 'success' || d.status_bayar === 'settled')).length,
   };
 
   const filtered = listDonatur.filter(d => {
     const matchPkg = selectedPackage === "all" || d.package_id === selectedPackage;
-    return matchPkg && d.nama_lengkap?.toLowerCase().includes(filterNama.toLowerCase());
+    const matchBatch = selectedBatchFilter === "all" || d.user_batch === selectedBatchFilter;
+    const matchNama = d.nama_lengkap?.toLowerCase().includes(filterNama.toLowerCase());
+    return matchPkg && matchBatch && matchNama;
   });
 
   return (
@@ -249,23 +327,54 @@ export default function ProgramKakaksaku() {
             </div>
           </div>
 
+          {/* KPI STATISTIK DETAIL */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex items-center gap-6 transition-all hover:shadow-md">
-              <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center text-blue-500 shadow-inner"><Users size={32}/></div>
-              <div><p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Total Donatur</p><p className="text-4xl font-black text-gray-900">{stats.total}</p></div>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md space-y-4">
+              <div className="flex items-center gap-6">
+                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500 shadow-inner"><Users size={28}/></div>
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Donatur</p>
+                  <p className="text-4xl font-black text-gray-900">{stats.totalAll}</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3 grid grid-cols-2 text-center text-xs font-bold text-gray-500">
+                <div className="border-r border-gray-100">Batch 1: <span className="text-blue-600 font-black">{stats.totalB1}</span></div>
+                <div>Batch 2: <span className="text-purple-600 font-black">{stats.totalB2}</span></div>
+              </div>
             </div>
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex items-center gap-6 transition-all hover:shadow-md">
-              <div className="w-16 h-16 bg-green-50 rounded-3xl flex items-center justify-center text-green-500 shadow-inner"><CheckCircle2 size={32}/></div>
-              <div><p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Lunas</p><p className="text-4xl font-black text-green-600">{stats.lunas}</p></div>
+
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md space-y-4">
+              <div className="flex items-center gap-6">
+                <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-500 shadow-inner"><CheckCircle2 size={28}/></div>
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-0.5">Lunas (Sesuai Bulan)</p>
+                  <p className="text-4xl font-black text-green-600">{stats.lunasAll}</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3 grid grid-cols-2 text-center text-xs font-bold text-gray-500">
+                <div className="border-r border-gray-100">Batch 1: <span className="text-green-600 font-black">{stats.lunasB1}</span></div>
+                <div>Batch 2: <span className="text-green-600 font-black">{stats.lunasB2}</span></div>
+              </div>
             </div>
-            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex items-center gap-6 transition-all hover:shadow-md">
-              <div className="w-16 h-16 bg-orange-50 rounded-3xl flex items-center justify-center text-orange-500 shadow-inner"><Clock size={32}/></div>
-              <div><p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Belum Bayar</p><p className="text-4xl font-black text-orange-500">{stats.sisa}</p></div>
+
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md space-y-4">
+              <div className="flex items-center gap-6">
+                <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 shadow-inner"><Clock size={28}/></div>
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-0.5">Menunggak</p>
+                  <p className="text-4xl font-black text-orange-500">{stats.sisaAll}</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3 grid grid-cols-2 text-center text-xs font-bold text-gray-500">
+                <div className="border-r border-gray-100">Batch 1: <span className="text-orange-600 font-black">{stats.sisaB1}</span></div>
+                <div>Batch 2: <span className="text-orange-600 font-black">{stats.sisaB2}</span></div>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/50 p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+          {/* UTILITY PANELS (PENCARIAN & FILTER BATCH) */}
+          <div className="bg-white/50 p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="relative w-full max-w-xl">
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 w-6 h-6" />
                 <input 
@@ -275,14 +384,41 @@ export default function ProgramKakaksaku() {
                 />
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button variant={selectedPackage === "all" ? "default" : "outline"} onClick={() => setSelectedPackage("all")} className="rounded-2xl font-black text-xs uppercase h-12 px-6">Semua</Button>
+                <Button variant={selectedPackage === "all" ? "default" : "outline"} onClick={() => setSelectedPackage("all")} className="rounded-2xl font-black text-xs uppercase h-12 px-6">Semua Paket</Button>
                 {packages.map(p => (
                   <Button key={p.id} variant={selectedPackage === p.id ? "default" : "outline"} onClick={() => setSelectedPackage(p.id)} className="rounded-2xl font-black text-xs uppercase h-12 px-6">{p.name} (Rp{p.amount / 1000}k)</Button>
                 ))}
               </div>
             </div>
+
+            {/* TAB FILTER BATCH */}
+            <div className="border-t border-gray-100/80 pt-5 flex items-center gap-3">
+              <Layers className="w-4 h-4 text-gray-400 mr-1" />
+              <Button 
+                variant={selectedBatchFilter === "all" ? "default" : "ghost"} 
+                onClick={() => setSelectedBatchFilter("all")} 
+                className="rounded-xl font-bold text-xs h-10 px-5 active:scale-95 transition-transform"
+              >
+                Semua Batch
+              </Button>
+              <Button 
+                variant={selectedBatchFilter === "batch1" ? "default" : "ghost"} 
+                onClick={() => setSelectedBatchFilter("batch1")} 
+                className="rounded-xl font-bold text-xs h-10 px-5 text-blue-600 hover:text-blue-700 active:scale-95 transition-transform"
+              >
+                Batch 1 Only
+              </Button>
+              <Button 
+                variant={selectedBatchFilter === "batch2" ? "default" : "ghost"} 
+                onClick={() => setSelectedBatchFilter("batch2")} 
+                className="rounded-xl font-bold text-xs h-10 px-5 text-purple-600 hover:text-purple-700 active:scale-95 transition-transform"
+              >
+                Batch 2 Only
+              </Button>
+            </div>
           </div>
 
+          {/* TABEL DATA */}
           <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-50 overflow-hidden">
             <div className="overflow-x-auto">
               {loading ? ( 
@@ -305,8 +441,16 @@ export default function ProgramKakaksaku() {
                       return (
                         <tr key={i} className="hover:bg-gray-50/50 transition-all group">
                           <td className="px-12 py-8">
-                            <p className="text-xl font-black text-[#1A1A1A] group-hover:text-orange-600 transition-colors mb-1">{row.nama_lengkap || 'Tanpa Nama'}</p>
-                            <p className="text-sm text-gray-400 font-bold tracking-tight">{row.no_wa || '-'}</p>
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="text-xl font-black text-[#1A1A1A] group-hover:text-orange-600 transition-colors">{row.nama_lengkap}</p>
+                              {/* BADGE INDIKATOR BATCH */}
+                              <span className={`px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                                row.user_batch === 'batch2' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {row.user_batch === 'batch2' ? 'B2' : 'B1'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-400 font-bold tracking-tight">{row.no_wa}</p>
                           </td>
                           <td className="px-12 py-8">
                             <span className="bg-gray-100 text-gray-500 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest">{row.package_name}</span>
@@ -317,7 +461,7 @@ export default function ProgramKakaksaku() {
                             </span>
                           </td>
                           <td className="px-12 py-8 text-center">
-                            {isSuccess && batasLunas ? (
+                            {batasLunas ? (
                               <span className="text-sm font-black text-gray-700 bg-gray-50 px-5 py-2.5 rounded-xl border border-gray-100 uppercase tracking-[0.15em]">{batasLunas}</span>
                             ) : <span className="text-gray-300 font-bold text-lg">-</span>}
                           </td>
