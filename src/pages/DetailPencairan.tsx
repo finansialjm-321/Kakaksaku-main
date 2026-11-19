@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Receipt, Calendar, ExternalLink } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
@@ -48,6 +49,11 @@ export default function DetailPencairan() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <SEO 
+        title="Riwayat Pencairan Dana — Jakarta Mengabdi"
+        description="Laporan transparansi penyaluran dan pencairan dana program donasi Jakarta Mengabdi."
+        canonical={`/program/${id}/pencairan`}
+      />
       <Header />
       
       <main className="flex-1 py-12 px-4 container mx-auto max-w-3xl">

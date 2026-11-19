@@ -1,12 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Heart, ArrowRight } from "lucide-react";
 import heroBg from "@/assets/image.png";
 
 export default function HeroSection() {
-  const navigate = useNavigate();
-
   return (
     <section className="relative min-h-[85vh] flex items-center overflow-hidden">
       <div className="absolute inset-0">
@@ -42,11 +40,15 @@ export default function HeroSection() {
           </p>
 
           <div className="flex flex-wrap gap-4">
-            <Button variant="hero" size="lg" onClick={() => navigate("/donasi")}>
-              <Heart className="w-5 h-5" /> Donasi Sekarang
+            <Button variant="hero" size="lg" asChild>
+              <Link to="/donasi">
+                <Heart className="w-5 h-5" /> Donasi Sekarang
+              </Link>
             </Button>
-            <Button variant="hero-outline" size="lg" onClick={() => navigate("/kakasaku")}>
-              Kakak Saku <ArrowRight className="w-5 h-5" />
+            <Button variant="hero-outline" size="lg" asChild>
+              <Link to="/kakasaku">
+                Kakak Saku <ArrowRight className="w-5 h-5" />
+              </Link>
             </Button>
           </div>
         </motion.div>

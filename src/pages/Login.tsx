@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import SEO from "@/components/SEO";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -61,6 +62,11 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] px-4">
+      <SEO 
+        title="Masuk ke Akun — Jakarta Mengabdi"
+        description="Masuk ke akun Kakak Saku Jakarta Mengabdi."
+        noindex={true}
+      />
       <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-[2.5rem] shadow-xl shadow-gold/5 border border-gold/5 relative">
         
         <div className="absolute top-8 left-8">

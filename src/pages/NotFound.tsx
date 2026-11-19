@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Home, SearchX, ArrowLeft } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const NotFound = () => {
   const location = useLocation();
@@ -17,6 +18,11 @@ const NotFound = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center p-6 font-sans">
+      <SEO 
+        title="Halaman Tidak Ditemukan — Jakarta Mengabdi"
+        description="Halaman yang Anda tuju tidak ditemukan."
+        noindex={true}
+      />
       <div className="max-w-md w-full text-center space-y-8">
         
         {/* Ilustrasi Visual */}
@@ -60,13 +66,11 @@ const NotFound = () => {
           </Button>
 
           <Button 
-            asChild
             variant="ghost"
+            onClick={() => window.history.back()}
             className="h-14 rounded-2xl font-bold text-gray-400 hover:text-orange-500 hover:bg-orange-50"
           >
-            <Link to={-1 as any}> {/* Kembali ke halaman sebelumnya */}
-              <ArrowLeft className="w-4 h-4 mr-2" /> Halaman Sebelumnya
-            </Link>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Halaman Sebelumnya
           </Button>
         </motion.div>
 

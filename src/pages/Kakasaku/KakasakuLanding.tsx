@@ -11,6 +11,7 @@ import {
   ShieldCheck, 
   HandHeart // Pastikan HandHeart diimport
 } from "lucide-react";
+import SEO from "@/components/SEO";
 
 export default function KakasakuLanding() {
   const navigate = useNavigate();
@@ -23,6 +24,11 @@ export default function KakasakuLanding() {
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden flex flex-col">
+      <SEO 
+        title="Program donasi rutin 9bulan & Pembinaan Kakak Saku — Jakarta Mengabdi"
+        description="Program pendampingan dan beasiswa rutin 9 bulan untuk adik asuh prasejahtera di Jakarta. Menghadirkan kakak pendamping dan dampak nyata berkelanjutan."
+        canonical="/kakasaku"
+      />
       <Header />
       
       <main className="flex-grow">

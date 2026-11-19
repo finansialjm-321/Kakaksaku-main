@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Mail, ArrowLeft, Loader2, KeyRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import SEO from "@/components/SEO";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -91,6 +92,11 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <SEO 
+        title="Lupa Kata Sandi — Jakarta Mengabdi"
+        description="Atur ulang kata sandi akun Kakak Saku Jakarta Mengabdi."
+        noindex={true}
+      />
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

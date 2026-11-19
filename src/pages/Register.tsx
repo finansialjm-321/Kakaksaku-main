@@ -11,6 +11,7 @@ import {
   Loader2, ArrowLeft, Eye, EyeOff, Phone, Mail, 
   User, Info, Calendar, Briefcase, Users, Lock 
 } from "lucide-react";
+import SEO from "@/components/SEO";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -156,6 +157,11 @@ export default function Register() {
   // 3. TAMPILAN JIKA DIBUKA (FORM ASLI TIDAK BERUBAH)
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4 relative py-12">
+      <SEO 
+        title="Daftar Akun Baru — Jakarta Mengabdi"
+        description="Pendaftaran akun Kakak Saku Jakarta Mengabdi."
+        noindex={true}
+      />
       <Button variant="ghost" className="absolute top-4 left-4" onClick={() => navigate("/")}>
         <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Beranda
       </Button>

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import AdminGuard from "@/components/AdminGuard";
@@ -18,7 +19,7 @@ import Donasi from "./pages/Donasi";
 import Tentang from "./pages/Tentang";
 import Status from "./pages/Status";
 import NotFound from "./pages/NotFound";
-import ProgramDetail from "./pages/ProgramDetail.tsx";
+import ProgramDetail from "./pages/ProgramDetail";
 import ProgramGallery from "./pages/ProgramGallery";
 import DetailPencairan from "./pages/DetailPencairan";
 import DetailKabarTerbaru from "./pages/DetailKabarTerbaru";
@@ -39,19 +40,18 @@ import KakasakuLanding from "./pages/Kakasaku/KakasakuLanding";
 import KakasakuPackages from "./pages/Kakasaku/KakasakuPackages";
 import KakasakuPayBill from "./pages/Kakasaku/KakasakuPayBill";
 import KakasakuHistory from "./pages/Kakasaku/KakasakuHistory";
-import { i } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
-
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
@@ -73,7 +73,7 @@ const App = () => (
               <Route path="/kakasaku/dashboard" element={<KakasakuDashboard />} />
               <Route path="/kakasaku/paket" element={<KakasakuPackages />} />
               <Route path="/kakasaku/bayar-tagihan" element={<KakasakuPayBill />} />
-              <Route path="/kakasaku/riwayat" element={<KakasakuHistory />} />``
+              <Route path="/kakasaku/riwayat" element={<KakasakuHistory />} />
 
               {/* Admin Routes - Terkunci Berdasarkan Role */}
               <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
@@ -94,6 +94,7 @@ const App = () => (
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
+</HelmetProvider>
 );
 
 export default App;

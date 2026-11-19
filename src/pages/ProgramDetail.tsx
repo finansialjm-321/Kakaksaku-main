@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import Footer from "@/components/Footer";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
+import SEO from "@/components/SEO";
 
 export default function ProgramDetail() {
   const { id } = useParams();
@@ -103,7 +104,9 @@ export default function ProgramDetail() {
 
   if (!program) return <div className="min-h-screen flex items-center justify-center">Program tidak ditemukan.</div>;
 
-  const collected = program.program_totals?.[0]?.total_collected || 0;
+  const rawTotal = program.program_totals;
+  const totalFromTotals = Array.isArray(rawTotal) ? rawTotal[0]?.total_collected : rawTotal?.total_collected;
+  const collected = Number(totalFromTotals ?? (donors.reduce((sum, d) => sum + Number(d.amount || 0), 0))) || 0;
   const target = program.target_amount || 1;
   const pct = Math.min(100, (collected / target) * 100);
 
@@ -114,6 +117,12 @@ export default function ProgramDetail() {
 
   return (
     <div className="min-h-screen bg-white text-[#1A1A1A]">
+      <SEO 
+        title={program?.title ? `${program.title} — Donasi Online | Jakarta Mengabdi` : "Detail Program Donasi — Jakarta Mengabdi"}
+        description={program?.description ? program.description.slice(0, 160) : "Salurkan donasi terbaik Anda untuk program ini bersama Jakarta Mengabdi."}
+        canonical={`/program/${id}`}
+        ogImage={program?.image_url || undefined}
+      />
       <Header />
       
       <main className="pb-24">
@@ -175,15 +184,26 @@ export default function ProgramDetail() {
                     <Wallet size={28} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black">Informasi Pencairan Dana</h3>
-                    <p className="text-sm text-gray-500 font-medium">Dana yang telah disalurkan: <span className="font-bold text-gray-800">Rp {totalDisbursed.toLocaleString('id-ID')}</span></p>
+                    <h3 className="text-xl font-black">Informasi Penyaluran Dana</h3>
+                    {totalDisbursed > 0 ? (
+                      <p className="text-sm text-gray-500 font-medium">Dana yang telah disalurkan: <span className="font-bold text-gray-800">Rp {totalDisbursed.toLocaleString('id-ID')}</span></p>
+                    ) : (
+                      <div className="mt-1">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 mb-1">
+                          Menunggu Tahap Penyaluran
+                        </span>
+                        <p className="text-xs text-gray-500 font-medium">Dana sedang dihimpun dan akan disalurkan secara transparan.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Button 
-                  onClick={() => navigate(`/program/${id}/pencairan`)}
+                  asChild
                   className="bg-[#1A1A1A] hover:bg-zinc-800 text-white rounded-2xl px-8 py-6 h-auto font-black flex items-center gap-3 transition-all active:scale-95 shadow-xl w-full md:w-auto"
                 >
-                  Lihat Detail <ArrowRight size={20} />
+                  <Link to={`/program/${id}/pencairan`}>
+                    Lihat Detail <ArrowRight size={20} />
+                  </Link>
                 </Button>
               </div>
 
@@ -276,10 +296,12 @@ export default function ProgramDetail() {
 
                 <div className="space-y-4">
                   <Button 
-                    onClick={() => navigate(`/donate?program=${program.id}`)} 
+                    asChild
                     className="w-full h-20 text-xl font-black rounded-[2rem] bg-orange-500 hover:bg-orange-600 shadow-2xl shadow-orange-200 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
                   >
-                    <Heart className="fill-white" /> Donasi Sekarang
+                    <Link to={`/donate?program=${program.id}`}>
+                      <Heart className="fill-white" /> Donasi Sekarang
+                    </Link>
                   </Button>
                   
                   <Button 

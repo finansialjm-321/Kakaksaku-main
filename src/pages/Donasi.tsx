@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Heart, ArrowRight } from "lucide-react"; // Tambah ArrowRight untuk pemanis tombol
+import SEO from "@/components/SEO";
 
 interface Program {
   id: string;
@@ -89,6 +90,11 @@ export default function Donasi() {
 
   return (
     <div className="min-h-screen bg-background text-[#1A1A1A]">
+      <SEO 
+        title="Daftar Program Donasi — Jakarta Mengabdi"
+        description="Pilih dan salurkan donasi untuk berbagai program sosial, kemanusiaan, dan pendidikan di Jakarta bersama Jakarta Mengabdi."
+        canonical="/donasi"
+      />
       <Header />
       <main className="container mx-auto px-4 py-12">
         <motion.div
@@ -190,15 +196,17 @@ export default function Donasi() {
                           </div>
                         </div>
                         
-                        {/* REVISI: Tombol sekarang masuk ke Detail Deskripsi */}
+                        {/* REVISI: Tombol sekarang masuk ke Detail Deskripsi berupa link semantik */}
                         <Button
+                          asChild
                           className="w-full h-16 text-lg font-black rounded-2xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            navigate(`/program/${p.id}`); 
-                          }}
                         >
-                          Lihat Detail <ArrowRight className="w-5 h-5" />
+                          <Link 
+                            to={`/program/${p.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Lihat Detail <ArrowRight className="w-5 h-5" />
+                          </Link>
                         </Button>
                       </CardContent>
                     </Card>

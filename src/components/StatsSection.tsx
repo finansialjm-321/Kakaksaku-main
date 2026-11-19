@@ -12,15 +12,18 @@ function formatRupiah(value: number): string {
 }
 
 async function fetchStats() {
-  const [donationsRes, programsRes] = await Promise.all([
+  const [donationsRes, programsRes, disbursementRes] = await Promise.all([
     supabase
       .from("donations")
       .select("amount, donor_name")
-      .eq("payment_status", "paid"),
+      .in("payment_status", ["success", "settled", "paid"]),
     supabase
       .from("donation_programs")
-      .select("target_amount, collected_amount")
+      .select("target_amount")
       .eq("is_active", true),
+    supabase
+      .from("pencairan_dana")
+      .select("nominal"),
   ]);
 
   if (donationsRes.error) throw donationsRes.error;
@@ -28,14 +31,14 @@ async function fetchStats() {
 
   const donations = donationsRes.data ?? [];
   const programs = programsRes.data ?? [];
+  const disbursements = disbursementRes.data ?? [];
 
-  const totalCollected = donations.reduce((sum, d) => sum + d.amount, 0);
+  const totalCollected = donations.reduce((sum, d) => sum + Number(d.amount || 0), 0);
   const uniqueDonors = new Set(donations.map((d) => d.donor_name)).size;
   const activePrograms = programs.length;
-  const totalTarget = programs.reduce((sum, p) => sum + p.target_amount, 0);
-  const totalDistributed = programs.reduce((sum, p) => sum + p.collected_amount, 0);
+  const totalDistributed = disbursements.reduce((sum, d) => sum + Number(d.nominal || 0), 0);
   const percentDistributed = totalCollected > 0
-    ? Math.round((totalDistributed / totalCollected) * 100)
+    ? Math.min(100, Math.round((totalDistributed / totalCollected) * 100))
     : 0;
 
   return { totalCollected, uniqueDonors, activePrograms, percentDistributed };

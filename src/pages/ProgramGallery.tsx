@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 
 export default function ProgramGallery() {
   const { id } = useParams();
@@ -50,6 +51,11 @@ export default function ProgramGallery() {
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A]">
+      <SEO 
+        title={`Galeri Dokumentasi ${program?.title || "Program"} — Jakarta Mengabdi`}
+        description={`Dokumentasi foto dan kegiatan penyaluran donasi program ${program?.title || ""}.`}
+        canonical={`/program/${id}/gallery`}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-12">

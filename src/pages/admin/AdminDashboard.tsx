@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       // 1. Hitung Total Donatur (Berdasarkan transaksi unik di table donations)
-      const { count: countDonasi } = await supabase.from("donations").select("*", { count: 'exact', head: true });
+      const { count: countDonasi } = await supabase.from("donations").select("id", { count: 'exact', head: true });
       
       // 2. PERBAIKAN TYPO: Hitung Total Donatur Kakaksaku (kakasaku_subscriptions)
       const { count: countSaku } = await supabase.from("kakasaku_subscriptions").select("*", { count: 'exact', head: true }).eq("status", "active");

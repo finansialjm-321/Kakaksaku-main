@@ -12,6 +12,7 @@ import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Loader2, AlertCircle, Heart } from "lucide-react";
 import SustainabilityDonation from "@/components/SustainabilityDonation";
+import SEO from "@/components/SEO";
 
 // --- Helpers & Constants ---
 interface Program {
@@ -67,7 +68,11 @@ export default function Donate() {
   // --- Effects ---
   useEffect(() => {
     const fetchPrograms = async () => {
-      const { data } = await supabase.from("donation_programs").select("id, title");
+      const { data } = await supabase
+        .from("donation_programs")
+        .select("id, title")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
       if (data) setPrograms(data);
     };
     fetchPrograms();
@@ -150,6 +155,11 @@ export default function Donate() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-[#1A1A1A]">
+      <SEO 
+        title="Formulir Donasi Online — Jakarta Mengabdi"
+        description="Salurkan donasi online Anda secara aman, cepat, dan transparan melalui berbagai metode pembayaran di Jakarta Mengabdi."
+        canonical="/donate"
+      />
       <Header />
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">
@@ -297,7 +307,7 @@ export default function Donate() {
                   
                   <div className="flex items-center justify-center gap-2 text-gray-400">
                     <Heart className="w-3 h-3 fill-gray-400" />
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-black">Secure Payment via Faspay Production</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black">Pembayaran Aman via Faspay</p>
                     <Heart className="w-3 h-3 fill-gray-400" />
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import { CheckCircle2, Home, LayoutDashboard, Clock, XCircle, Loader2, RefreshCw
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
+import SEO from "@/components/SEO";
 
 export default function Status() {
   const navigate = useNavigate();
@@ -53,13 +54,13 @@ export default function Status() {
     try {
       if (billNo.startsWith('DON-')) {
         // A. KEMBALI KE DONASI UMUM
-        const { data: oldDonation } = await supabase.from("donations").select("*").eq("bill_no", billNo).single();
+        const { data: oldDonation } = await supabase.from("donations").select("amount, donor_name, message, program_id").eq("bill_no", billNo).single();
         if (oldDonation) {
           const params = new URLSearchParams({
             amount: oldDonation.amount?.toString() || "",
             name: oldDonation.donor_name || "",
-            phone: oldDonation.donor_phone || "",
-            email: oldDonation.donor_email || "",
+            phone: "",
+            email: "",
             msg: oldDonation.message || "",
             program: oldDonation.program_id || ""
           });
@@ -86,6 +87,11 @@ export default function Status() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-[#1A1A1A]">
+      <SEO 
+        title="Status Pembayaran — Jakarta Mengabdi"
+        description="Status verifikasi pembayaran donasi Jakarta Mengabdi."
+        noindex={true}
+      />
       <Header />
       <main className="flex-grow flex items-center justify-center p-4 py-12">
         <Card className={`max-w-md w-full shadow-2xl border-t-8 rounded-3xl overflow-hidden bg-white transition-all duration-500 ${

@@ -1,0 +1,35 @@
+<IfModule mod_headers.c>
+  # 1. Mencegah Clickjacking (Website tidak bisa disematkan di iframe situs lain)
+  Header always set X-Frame-Options "DENY"
+
+  # 2. Mencegah Browser menebak tipe file (MIME-type sniffing)
+  Header always set X-Content-Type-Options "nosniff"
+
+  # 3. Mencegah kebocoran URL referer ke website luar
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # 4. Membatasi akses sensor perangkat (kamera, mic, lokasi dimatikan)
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(self)"
+
+  # 5. Content Security Policy (Sudah disesuaikan dengan Supabase, Faspay, dan Google Fonts)
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.faspay.co.id; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://*.faspay.co.id"
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 1. Paksa HTTPS (Otomatis arahkan http:// ke https://)
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # 2. Redirect www ke non-www (Kanonikal)
+  RewriteCond %{HTTP_HOST} ^www\.kakasaku\.jakartamengabdi\.com$ [NC]
+  RewriteRule ^ https://kakasaku.jakartamengabdi.com%{REQUEST_URI} [L,R=301]
+
+  # 3. SPA Routing (Wajib untuk React Router agar tidak 404 saat halaman di-refresh)
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

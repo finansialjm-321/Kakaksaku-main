@@ -2,10 +2,16 @@ import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Heart, Target, Eye, Users } from "lucide-react";
+import SEO from "@/components/SEO";
 
 export default function Tentang() {
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Tentang Kami — Jakarta Mengabdi"
+        description="Pelajari visi, misi, dan aksi sosial Jakarta Mengabdi dalam memberdayakan anak-anak dan warga prasejahtera di ibu kota."
+        canonical="/tentang"
+      />
       <Header />
       <main>
         {/* Hero */}

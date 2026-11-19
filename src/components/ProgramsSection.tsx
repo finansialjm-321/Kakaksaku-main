@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Heart, ArrowRight } from "lucide-react"; // Tambahkan ArrowRight
 
@@ -172,16 +172,18 @@ export default function ProgramsSection() {
                           <p className="text-xs text-muted-foreground font-medium">Target: {formatRupiah(p.target_amount)}</p>
                         </div>
                         
-                        {/* PERBAIKAN: Tombol navigasi ke detail */}
+                        {/* PERBAIKAN: Tombol navigasi ke detail berupa link semantik */}
                         <Button 
                           variant="gold" 
                           className="w-full mt-2 font-bold hover:scale-[1.02] transition-transform py-6 rounded-xl flex items-center justify-center gap-2" 
-                          onClick={(e) => {
-                            e.stopPropagation(); // Mencegah double click karena card juga punya onClick
-                            navigate(`/program/${p.id}`);
-                          }}
+                          asChild
                         >
-                          Lihat Detail <ArrowRight className="w-4 h-4" />
+                          <Link 
+                            to={`/program/${p.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Lihat Detail <ArrowRight className="w-4 h-4" />
+                          </Link>
                         </Button>
                       </CardContent>
                     </Card>
